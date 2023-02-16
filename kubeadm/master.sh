@@ -1,7 +1,8 @@
 #!/bin/bash
 #i1) Switch to root user [ sudo -i]
 
-sudo hostnamectl set-hostname  node1
+sudo hostnamectl set-hostname master
+sudo -i
 
 #2) Disable swap & add kernel settings
 
@@ -96,5 +97,25 @@ systemctl daemon-reload
 systemctl start kubelet
 systemctl enable kubelet.service
 
-sudo kubeadm join 10.0.0.6:6443 --token xmzufh.e0nu3kb5ohijfxyh \
-        --discovery-token-ca-cert-hash sha256:579b6a53bd00c8483f5150b9fb521b6431fc38b1ac716b8b9a5f668928a93771
+# Initialize Kubernetes control plane by running the below commond as root user.
+sudo kubeadm init
+
+#Exit as root user
+sudo su - ubuntu
+
+#Execute the below command as a normal ubuntu user
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+#To verify, if kubectl is working or not, run the following command.
+kubectl get pods -A
+
+#deploy the network plugin - weave network and verify
+kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
+kubectl get pods -A
+kubectl get node
+
+#Copy kubeadm join token from the master and execute in Worker Nodes to join to cluster
+#Generate the master join token on the master node
+#kubeadm token create --print-join-command
